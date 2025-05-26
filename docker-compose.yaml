@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - .env
+      - .env.coolify
     depends_on:
       mysql:
         condition: service_healthy
@@ -22,7 +22,7 @@ services:
     image: mysql:8
     container_name: gemini-balance-mysql
     restart: unless-stopped
-    env_file: .env  
+    env_file: .env.coolify  
 
     # ports:
     #   - "3306:3306"
