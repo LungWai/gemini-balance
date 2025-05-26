@@ -22,7 +22,11 @@ services:
     image: mysql:8
     container_name: gemini-balance-mysql
     restart: unless-stopped
-    env_file: .env.coolify  
+    environment:
+      MYSQL_ROOT_PASSWORD: your_root_password
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
 
     # ports:
     #   - "3306:3306"
