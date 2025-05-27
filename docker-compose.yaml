@@ -1,3 +1,5 @@
+# This is specialized for coolify
+
 volumes:
   mysql_data:
 services:
