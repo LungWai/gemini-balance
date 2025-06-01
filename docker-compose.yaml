@@ -22,14 +22,14 @@ services:
       - "8000:8000"
     environment:
       #数据库（在最上方统一设置）
-      MYSQL_HOST: 'db'
+      MYSQL_HOST: 'gemini-balance-sql'
       MYSQL_PORT: '3306'
       MYSQL_USER: *db_user
       MYSQL_PASSWORD: *db_user_password
       MYSQL_DATABASE: *db_name
 
       API_KEYS: '["GEMINI_API_KEY_1","GEMINI_API_KEY_2"]' # 修改为你自己的 Gemini API Key (可放多个)
-      ALLOWED_TOKENS: '["ALLOWED_TOKEN_1","ALLOWED_TOKEN_2"]' # 修改为允许访问服务的 Token 
+      ALLOWED_TOKENS: '["sk-111111","ALLOWED_TOKEN_2"]' # 修改为允许访问服务的 Token 
       AUTH_TOKEN: 'sk-576809'                           # 修改为超级管理员 Token 
 
       TEST_MODEL: 'gemini-1.5-flash'           # 默认测试模型
