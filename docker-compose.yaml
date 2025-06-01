@@ -7,7 +7,7 @@ x-variables:
   # !! 在此处统一设置数据库密码，方便修改!!
   db_root_password: &db_root_password 'AD8312FC' # MySQL Root 密码
   db_user_password: &db_user_password 'AD8312FC' # MySQL User 密码
-  db_name: &db_name 'gemini-balance-sql'    # 数据库名
+  db_name: &db_name 'gemini-balance-mysql'    # 数据库名
   db_user: &db_user 'gemini_user'    # 数据库用户名
 
 networks:
@@ -22,7 +22,7 @@ services:
       - "8000:8000"
     environment:
       #数据库（在最上方统一设置）
-      MYSQL_HOST: 'gemini-balance-sql'
+      MYSQL_HOST: 'gemini-balance-mysql'
       MYSQL_PORT: '3306'
       MYSQL_USER: *db_user
       MYSQL_PASSWORD: *db_user_password
