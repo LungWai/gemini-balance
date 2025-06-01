@@ -30,7 +30,7 @@ services:
 
       API_KEYS: '["GEMINI_API_KEY_1","GEMINI_API_KEY_2"]' # 修改为你自己的 Gemini API Key (可放多个)
       ALLOWED_TOKENS: '["ALLOWED_TOKEN_1","ALLOWED_TOKEN_2"]' # 修改为允许访问服务的 Token 
-      AUTH_TOKEN: 'SUPER_ADMIN_TOKEN'                           # 修改为超级管理员 Token 
+      AUTH_TOKEN: 'sk-576809'                           # 修改为超级管理员 Token 
 
       TEST_MODEL: 'gemini-1.5-flash'           # 默认测试模型
       TIMEZONE: 'Asia/Shanghai'                # 时区设置
