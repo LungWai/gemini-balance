@@ -3,6 +3,13 @@ version: "3.9"
 volumes:
   mysql_data:
 
+x-variables:
+  # !! 在此处统一设置数据库密码，方便修改!!
+  db_root_password: &db_root_password 'AD8312FC' # MySQL Root 密码
+  db_user_password: &db_user_password 'AD8312FC' # MySQL User 密码
+  db_name: &db_name 'gemini-balance-sql'    # 数据库名
+  db_user: &db_user 'gemini_user'    # 数据库用户名
+
 networks:
   internal:                # single private bridge
     driver: bridge
@@ -13,10 +20,31 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    env_file: .env
-    # Ensure the app sees the DB at the stable service name
     environment:
-      MYSQL_HOST: gemini-balance-mysql
+      #数据库（在最上方统一设置）
+      MYSQL_HOST: 'db'
+      MYSQL_PORT: '3306'
+      MYSQL_USER: *db_user
+      MYSQL_PASSWORD: *db_user_password
+      MYSQL_DATABASE: *db_name
+
+      API_KEYS: '["GEMINI_API_KEY_1","GEMINI_API_KEY_2"]' # 修改为你自己的 Gemini API Key (可放多个)
+      ALLOWED_TOKENS: '["ALLOWED_TOKEN_1","ALLOWED_TOKEN_2"]' # 修改为允许访问服务的 Token 
+      AUTH_TOKEN: 'SUPER_ADMIN_TOKEN'                           # 修改为超级管理员 Token 
+
+      TEST_MODEL: 'gemini-1.5-flash'           # 默认测试模型
+      TIMEZONE: 'Asia/Shanghai'                # 时区设置
+      LOG_LEVEL: 'INFO'                        # 日志级别 (如 DEBUG, INFO, WARNING, ERROR)
+      MAX_FAILURES: 3                          # Key 连续失败多少次后禁用
+      MAX_RETRIES: 3                           # API 请求重试次数
+      CHECK_INTERVAL_HOURS: 1                  # 定时检查 Key 状态的间隔 (小时)
+      TIME_OUT: 300                            # API 请求超时时间 (秒)
+
+      PAID_KEY: 'your-paid-api-key'           # 付费 Key (如果使用)
+      CREATE_IMAGE_MODEL: 'imagen-3.0-generate-002' # 图像生成模型
+      UPLOAD_PROVIDER: 'smms'                 # 图床服务商 (如 smms)
+      SMMS_SECRET_TOKEN: 'your-smms-token'    # SM.MS 图床 Token
+
     depends_on:
       mysql:
         condition: service_healthy
@@ -35,10 +63,11 @@ services:
     image: mysql:8
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      #数据库（在最上方统一设置）
+      MYSQL_ROOT_PASSWORD: *db_root_password
+      MYSQL_DATABASE: *db_name
+      MYSQL_USER: *db_user
+      MYSQL_PASSWORD: *db_user_password
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
