@@ -1,69 +1,107 @@
 version: "3.9"
 
+# ── reusable variables (anchors) ──────────────────────────────────────
+x-variables:
+  db_root_password: &db_root_password "AD8312FC"
+  db_user_password: &db_user_password "AD8312FC"
+  db_name: &db_name "gemini-balance-mysql"
+  db_user: &db_user "gemini_user"
+
 volumes:
   mysql_data:
 
-x-variables:
-  # !! 在此处统一设置数据库密码，方便修改!!
-  db_root_password: &db_root_password 'AD8312FC' # MySQL Root 密码
-  db_user_password: &db_user_password 'AD8312FC' # MySQL User 密码
-  db_name: &db_name 'gemini-balance-mysql'    # 数据库名
-  db_user: &db_user 'gemini_user'    # 数据库用户名
-
-networks:
-  internal:                # single private bridge
-    driver: bridge
-
+# ── services ─────────────────────────────────────────────────────────
 services:
   gemini-balance:
     image: ghcr.io/snailyp/gemini-balance:latest
     restart: unless-stopped
+
+    # Let Coolify/Traefik map the host port automatically
     ports:
-      - "8000:8000"
+      - "8000"
+
     environment:
-      #数据库（在最上方统一设置）
-      MYSQL_HOST: 'gemini-balance-mysql'
-      MYSQL_PORT: '3306'
+      # ── core DB settings ──
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
       MYSQL_USER: *db_user
       MYSQL_PASSWORD: *db_user_password
       MYSQL_DATABASE: *db_name
+      DATABASE_TYPE: mysql
 
-      API_KEYS: '["GEMINI_API_KEY_1","GEMINI_API_KEY_2"]' # 修改为你自己的 Gemini API Key (可放多个)
-      ALLOWED_TOKENS: '["sk-111111","ALLOWED_TOKEN_2"]' # 修改为允许访问服务的 Token 
-      AUTH_TOKEN: 'sk-576809'                           # 修改为超级管理员 Token 
+      # ── application auth / key management ──
+      API_KEYS: '["GEMINI_API_KEY_1","GEMINI_API_KEY_2"]'
+      ALLOWED_TOKENS: '["sk-111111","ALLOWED_TOKEN_2"]'
+      AUTH_TOKEN: 'sk-576809'
+      VERTEX_API_KEYS: '["AQ.Abxxxxxxxxxxxxxxxxxxx"]'
+      VERTEX_EXPRESS_BASE_URL: "https://aiplatform.googleapis.com/v1beta1/publishers/google"
 
-      TEST_MODEL: 'gemini-1.5-flash'           # 默认测试模型
-      TIMEZONE: 'Asia/Shanghai'                # 时区设置
-      LOG_LEVEL: 'INFO'                        # 日志级别 (如 DEBUG, INFO, WARNING, ERROR)
-      MAX_FAILURES: 3                          # Key 连续失败多少次后禁用
-      MAX_RETRIES: 3                           # API 请求重试次数
-      CHECK_INTERVAL_HOURS: 1                  # 定时检查 Key 状态的间隔 (小时)
-      TIME_OUT: 300                            # API 请求超时时间 (秒)
+      # ── model routing ──
+      TEST_MODEL: gemini-1.5-flash
+      THINKING_MODELS: '["gemini-2.5-flash-preview-04-17"]'
+      THINKING_BUDGET_MAP: '{"gemini-2.5-flash-preview-04-17": 4000}'
+      IMAGE_MODELS: '["gemini-2.0-flash-exp"]'
+      SEARCH_MODELS: '["gemini-2.0-flash-exp","gemini-2.0-pro-exp"]'
+      FILTERED_MODELS: '["gemini-1.0-pro-vision-latest","gemini-pro-vision","chat-bison-001","text-bison-001","embedding-gecko-001"]'
 
-      PAID_KEY: 'your-paid-api-key'           # 付费 Key (如果使用)
-      CREATE_IMAGE_MODEL: 'imagen-3.0-generate-002' # 图像生成模型
-      UPLOAD_PROVIDER: 'smms'                 # 图床服务商 (如 smms)
-      SMMS_SECRET_TOKEN: 'your-smms-token'    # SM.MS 图床 Token
+      # ── runtime behaviour ──
+      TOOLS_CODE_EXECUTION_ENABLED: "false"
+      SHOW_SEARCH_LINK: "true"
+      SHOW_THINKING_PROCESS: "true"
+      BASE_URL: "https://generativelanguage.googleapis.com/v1beta"
+      MAX_FAILURES: 3            # kept from Compose (env had 10)
+      MAX_RETRIES: 3
+      CHECK_INTERVAL_HOURS: 1
+      TIME_OUT: 300
+      TIMEZONE: Asia/Shanghai
+      LOG_LEVEL: INFO            # kept from Compose (env had lower-case)
 
+      # ── proxy support ──
+      PROXIES: '[]'
+
+      # ── image-generation options ──
+      PAID_KEY: "your-paid-api-key"
+      CREATE_IMAGE_MODEL: imagen-3.0-generate-002
+      UPLOAD_PROVIDER: smms
+      SMMS_SECRET_TOKEN: "your-smms-token"
+      PICGO_API_KEY: "xxxx"
+      CLOUDFLARE_IMGBED_URL: "https://xxxxxxx.pages.dev/upload"
+      CLOUDFLARE_IMGBED_AUTH_CODE: "xxxxxxxxx"
+
+      # ── stream optimiser ──
+      STREAM_OPTIMIZER_ENABLED: "false"
+      STREAM_MIN_DELAY: 0.016
+      STREAM_MAX_DELAY: 0.024
+      STREAM_SHORT_TEXT_THRESHOLD: 10
+      STREAM_LONG_TEXT_THRESHOLD: 50
+      STREAM_CHUNK_SIZE: 5
+
+      # ── logging housekeeping ──
+      AUTO_DELETE_ERROR_LOGS_ENABLED: "true"
+      AUTO_DELETE_ERROR_LOGS_DAYS: 7
+      AUTO_DELETE_REQUEST_LOGS_ENABLED: "false"
+      AUTO_DELETE_REQUEST_LOGS_DAYS: 30
+
+      # ── fake streaming / safety controls ──
+      FAKE_STREAM_ENABLED: "True"
+      FAKE_STREAM_EMPTY_DATA_INTERVAL_SECONDS: 5
+      SAFETY_SETTINGS: '[{"category":"HARM_CATEGORY_HARASSMENT","threshold":"OFF"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"OFF"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"OFF"},{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"OFF"},{"category":"HARM_CATEGORY_CIVIC_INTEGRITY","threshold":"BLOCK_NONE"}]'
+
+    # Wait for MySQL to be up before we start serving traffic
     depends_on:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: >
-        CMD-SHELL python -c "import requests, sys; 
-        sys.exit(0) if requests.get('http://localhost:8000/health').status_code == 200 else sys.exit(1)"
+      test: ["CMD-SHELL", "python - <<'PY'\nimport sys,requests,os\nurl='http://localhost:8000/health'\ntry:\n  r=requests.get(url,timeout=2)\n  sys.exit(0 if r.status_code==200 else 1)\nexcept Exception:\n  sys.exit(1)\nPY"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
-    networks:
-      - internal            # <-- on the same network as MySQL
 
   mysql:
-    image: mysql:8
+    image: mysql:8.2
     restart: unless-stopped
     environment:
-      #数据库（在最上方统一设置）
       MYSQL_ROOT_PASSWORD: *db_root_password
       MYSQL_DATABASE: *db_name
       MYSQL_USER: *db_user
@@ -71,13 +109,8 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 30s
-    networks:
-      internal:
-        # Optional: old name still resolves, but does **not** pin the container
-        aliases:
-          - gemini-balance-mysql
